@@ -134,7 +134,12 @@ body {
         0 0 10px rgba(255, 255, 255, 0.5);
 }
 
-.yellow-text { color: var(--text-yellow); }
+.yellow-text { color: var(--text-yellow) !important; }
+
+.showcase-card.yu-an .pixel-avatar-large {
+    object-position: center top;
+    object-fit: cover;
+}
 .cyan-text { color: var(--text-cyan); }
 .green-text { color: var(--text-green); }
 .red-text { color: var(--text-red); }

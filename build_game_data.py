@@ -3,92 +3,120 @@ import json
 import os
 
 def normalize_text(text):
-    # Replaces radical characters with standard Chinese characters
+    text = text.replace("她", "他")
     replacements = {
-        "⼀": "一",
-        "⿈": "黃",
-        "⽲": "禾",
-        "⾓": "角",
-        "⾊": "色",
-        "⽼": "老",
-        "⽀": "支",
-        "⾦": "金",
-        "⽂": "文",
-        "⼒": "力",
-        "⾝": "身",
-        "⽗": "父",
-        "⺟": "母",
-        "⾼": "高",
-        "主⾓": "主角",
-        "影⼦": "影子",
-        "壓⼒": "壓力",
-        "學習⼒": "學習力",
-        "資訊感": "資訊感",
-        "公⾞": "公車",
-        "費⽤": "費用",
-        "充⾜": "充足",
-        "學⽣": "學生",
-        "收⼊": "收入",
-        "處⿂": "處境",
-        "⾃": "自",
-        "⼰": "己",
-        "⽐": "比",
-        "⼿": "手",
-        "櫃台⼈員": "櫃台人員",
-        "內⼼": "內心",
-        "旁⽩": "旁白",
-        "獨⽩": "獨白",
-        "同選項對照": "同選項對照",
-        "差異重點": "差異重點",
-        "數值結果": "數值結果",
-        "劇情結果": "劇情結果",
-        "陳佳⽲": "陳佳禾",
-        "⿈以真": "黃以真",
-        "林予安": "林予安",
-        "入": "入",
-        "面": "面"
+        # CJK Radicals Supplement
+        "\u2e9f": "母", # ⺟
+        "\u2ec4": "西", # ⻄
+        "\u2ed1": "長", # ⻑
+        # Kangxi Radicals
+        "\u2f00": "一", # ⼀
+        "\u2f06": "二", # ⼆
+        "\u2f08": "人", # ⼈
+        "\u2f0a": "入", # ⼊
+        "\u2f12": "力", # ⼒
+        "\u2f17": "十", # ⼗
+        "\u2f1c": "又", # ⼜
+        "\u2f1d": "口", # ⼝
+        "\u2f26": "子", # ⼦
+        "\u2f29": "小", # ⼩
+        "\u2f30": "己", # ⼰
+        "\u2f32": "干", # ⼲
+        "\u2f3c": "心", # ⼼
+        "\u2f3f": "手", # ⼿
+        "\u2f40": "支", # ⽀
+        "\u2f42": "文", # ⽂
+        "\u2f45": "方", # ⽅
+        "\u2f47": "日", # ⽇
+        "\u2f50": "比", # ⽐
+        "\u2f54": "水", # ⽔
+        "\u2f5a": "片", # ⽚
+        "\u2f63": "生", # ⽣
+        "\u2f64": "用", # ⽤
+        "\u2f69": "白", # ⽩
+        "\u2f6c": "目", # ⽬
+        "\u2f70": "示", # ⽰
+        "\u2f72": "禾", # ⽲
+        "\u2f74": "立", # ⽴
+        "\u2f7c": "老", # ⽼
+        "\u2f7d": "而", # ⽽
+        "\u2f7f": "耳", # ⽿
+        "\u2f83": "自", # ⾃
+        "\u2f84": "至", # ⾄
+        "\u2f8a": "色", # ⾊
+        "\u2f8f": "行", # ⾏
+        "\u2f92": "見", # ⾒
+        "\u2f93": "角", # ⾓
+        "\u2f9c": "足", # ⾜
+        "\u2f9d": "身", # ⾝
+        "\u2f9e": "車", # ⾞
+        "\u2f9f": "辛", # ⾟
+        "\u2fa6": "金", # ⾦
+        "\u2fa8": "門", # ⾨
+        "\u2fae": "非", # ⾮
+        "\u2faf": "面", # ⾯
+        "\u2fb3": "音", # ⾳
+        "\u2fb4": "頁", # ⾴
+        "\u2fb5": "風", # ⾵
+        "\u2fbc": "高", # ⾼
+        "\u2fc8": "黃", # ⿈
+        "\u2fca": "黑", # ⿊
+        "\u2fce": "鼓", # ⿎
+        "\u2fcf": "鼠", # ⿏
+        "\u2fd1": "齊", # ⿑
+        "\u2fd3": "龍", # ⿓
     }
     for old, new in replacements.items():
         text = text.replace(old, new)
     return text
 
+
 def clean_paragraphs(lines):
-    cleaned = []
+    # Chinese sentence-ending punctuation marks
+    ending_punctuation = re.compile(r'[。！？」』…”）\.\!\?]$')
+    
+    cleaned_lines = []
     for line in lines:
         l = line.strip()
         if not l:
+            cleaned_lines.append("")
             continue
         if "Page " in l and "===" in line:
             continue
         if l == "============================================================":
             continue
-        cleaned.append(l)
+        if re.match(r'^(?:Page|Table)\s*\d+', l, re.IGNORECASE):
+            continue
+        cleaned_lines.append(l)
         
     result = []
     current_para = []
-    for line in cleaned:
-        if (line.startswith("「") or line.startswith("同學") or line.startswith("老師") or 
-            line.endswith("：") or line.endswith(":") or line.startswith("-") or 
-            line.startswith("林予安") or line.startswith("陳佳") or line.startswith("黃以") or 
-            re.match(r"^[A-D]\.", line) or re.match(r"^選項\s*[A-D]", line)):
-            if current_para:
+    for line in cleaned_lines:
+        if not line:
+            if current_para and ending_punctuation.search(current_para[-1]):
                 result.append("".join(current_para))
                 current_para = []
-            result.append(line)
         else:
+            # Dialogue/narrator prefix triggers a new paragraph to prevent run-on issues
+            if current_para and (line.startswith("「") or 
+                                 line.endswith("：") or 
+                                 line.endswith(":") or
+                                 re.match(r"^(?:同學|老師|店長|媽媽|林予安|陳佳禾|黃以真|主角)[\:\：]", line) or
+                                 re.match(r"^[A-D]\.", line) or 
+                                 re.match(r"^選項\s*[A-D]", line)):
+                result.append("".join(current_para))
+                current_para = []
             current_para.append(line)
+            
     if current_para:
         result.append("".join(current_para))
         
     return "\n\n".join(result)
 
 def clean_conclusion(text):
-    # Remove "系統文字：" and "系統文字"
     text = re.sub(r'系統文字\s*[\:\：]?', '', text)
-    # Remove table page headers like --- Table 1 on Page 25 ---
     text = re.sub(r'--- Table \d+ on Page \d+ ---', '', text, flags=re.IGNORECASE)
     
-    # Split text into lines to filter out table rows or option lists
     lines = text.split('\n')
     cleaned_lines = []
     for line in lines:
@@ -96,26 +124,52 @@ def clean_conclusion(text):
         if not l:
             cleaned_lines.append("")
             continue
-        # Skip table rows (contain tabs or pipes)
         if '\t' in l or '|' in l:
             continue
-        # Skip table headers, options or scores summary
         if l.startswith(('選項', '角色', '張宇翔｜', '林予安｜', '陳佳禾｜', '黃以真｜')):
             continue
         if re.match(r'^[A-D]\s*[\.．\s]', l):
             continue
-        # Skip transition prompts like "最後進入下一關：" or "最後進入結局畫面"
         if l.startswith(('最後進入下一關', '最後進入下一關：', '最後進入結局畫面')):
             continue
-        # Skip table page references
         if 'Table' in l and 'Page' in l:
             continue
         cleaned_lines.append(l)
         
     cleaned_text = "\n".join(cleaned_lines)
-    # Remove multiple blank lines
     cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text)
     return cleaned_text.strip()
+
+def deep_clean_text(text):
+    if not text or not isinstance(text, str):
+        return text
+    
+    text = re.sub(r'---\s*Table\s+\d+\s+on\s+Page\s+\d+\s*---', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'Table\s+\d+\s+on\s+Page\s+\d+', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'(?:^|\n)Page\s*\d+(?:\n|$)', '\n', text)
+    text = re.sub(r'Page\s*\d+', '', text)
+    text = re.sub(r'={10,}', '', text)
+    text = re.sub(r'\n?狀態[\t\s]+變化[\s\S]*?(?=\n[^\t]|$)', '', text)
+    text = re.sub(r'\n+(?:主角結果)?\s*狀態\s+變化[\s\S]*$', '', text)
+    text = re.sub(r'\n?(?:資源|學習力|壓力|資訊感|滿意度|穩定度)\s{2,}[\+\-]?\d+', '', text)
+    text = re.sub(r'\s*影子角色\s*$', '', text)
+    text = re.sub(r'系統文字\s*[\:\：]?', '', text)
+    text = re.sub(r'  +', ' ', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = text.strip()
+    return text
+
+def deep_clean_all(obj, key=None):
+    if isinstance(obj, str):
+        if key == "delta":
+            # For delta, we only want to strip it, not run deep_clean_text which removes stats!
+            return obj.strip()
+        return deep_clean_text(obj)
+    elif isinstance(obj, dict):
+        return {k: deep_clean_all(v, k) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [deep_clean_all(item, key) for item in obj]
+    return obj
 
 def extract_section(text, start_pattern, end_patterns):
     start_match = re.search(start_pattern, text)
@@ -134,58 +188,198 @@ def extract_section(text, start_pattern, end_patterns):
                 
     return text[start_idx:earliest_end_idx].strip(), start_idx
 
+def clean_shadows_text(text):
+    text = re.sub(r'---\s*Table\s*\d+\s*on\s*Page\s*\d+\s*---[\s\S]*?(?:={10,}\s*Page\s*\d+\s*={10,}|\Z)', '', text)
+    text = re.sub(r'={10,}\s*Page\s*\d+\s*={10,}', '', text)
+    return text
+
+def split_by_3spaces(line):
+    parts = []
+    idx_cursor = 0
+    while idx_cursor < len(line):
+        while idx_cursor < len(line) and line[idx_cursor].isspace():
+            idx_cursor += 1
+        if idx_cursor >= len(line):
+            break
+        start_pos = idx_cursor
+        match_spaces = re.search(r'\s{3,}', line[start_pos:])
+        if match_spaces:
+            end_pos = start_pos + match_spaces.start()
+            idx_cursor = start_pos + match_spaces.end()
+        else:
+            end_pos = len(line)
+            idx_cursor = len(line)
+        part_text = line[start_pos:end_pos].strip()
+        if part_text:
+            parts.append((part_text, start_pos))
+    return parts
+
+def split_by_2spaces(line):
+    parts = []
+    idx_cursor = 0
+    while idx_cursor < len(line):
+        while idx_cursor < len(line) and line[idx_cursor].isspace():
+            idx_cursor += 1
+        if idx_cursor >= len(line):
+            break
+        start_pos = idx_cursor
+        match_spaces = re.search(r'\s{2,}', line[start_pos:])
+        if match_spaces:
+            end_pos = start_pos + match_spaces.start()
+            idx_cursor = start_pos + match_spaces.end()
+        else:
+            end_pos = len(line)
+            idx_cursor = len(line)
+        part_text = line[start_pos:end_pos].strip()
+        if part_text:
+            parts.append((part_text, start_pos))
+    return parts
+
+def split_stat_and_tail(text, pos):
+    matches = list(re.finditer(r'[\+\-]\d+', text))
+    if not matches:
+        return [(text, pos)]
+        
+    end_idx = matches[-1].end()
+    tail = text[end_idx:]
+    if not tail:
+        return [(text, pos)]
+        
+    split_idx = len(tail)
+    for i, c in enumerate(tail):
+        if c.isspace() or c in ["、", ",", "，", "；", "。"]:
+            continue
+        if c not in ["資", "源", "學", "習", "力", "力", "壓", "訊", "感", "社", "會", "連", "結", "滿", "意", "度", "穩", "定", "試", "錯", "安", "全", "未", "來", "不", "確", "及", "格"]:
+            split_idx = i
+            break
+            
+    if split_idx < len(tail):
+        col2_text = text[:end_idx + split_idx].strip()
+        col3_text = tail[split_idx:].strip()
+        return [(col2_text, pos), (col3_text, pos + end_idx + split_idx)]
+    else:
+        return [(text, pos)]
+
+def is_stat_part(text, pos):
+    if any(punc in text for punc in ["。", "，", "；", "！", "？", "「", "」", "｜"]):
+        return False
+    if re.search(r'[\+\-]\d+', text):
+        return True
+    if pos >= 30 and len(text) <= 5:
+        stat_keywords = ["資源", "學習力", "壓力", "資訊感", "社會連結", "滿意度", "穩定度", "學習力", "壓力", "試錯安全感", "未來不確定", "學習⼒", "壓⼒", "習力", "習⼒", "資", "源", "學", "習", "力", "力", "壓", "訊", "感", "社", "會", "連", "結", "滿", "意", "度", "穩", "定", "試", "錯", "安", "全", "未", "來", "不", "確", "訊感", "安全感", "不確定", "學習", "未來", "社會", "連結", "滿意", "穩定", "意度", "定度", "試錯", "安全", "及", "格"]
+        clean_text = text.strip("、, ")
+        if clean_text in stat_keywords:
+            return True
+    return False
+
 def parse_shadows(shadows_text):
     shadow_data = {}
-    lines = [l.strip() for l in shadows_text.split("\n") if l.strip()]
+    cleaned_text = clean_shadows_text(shadows_text)
+    lines = cleaned_text.split("\n")
     
-    characters = ["林予安", "陳佳禾", "黃以真"]
-    for char in characters:
-        char_lines = []
-        capturing = False
-        for line in lines:
-            if char in line:
-                capturing = True
-                char_lines.append(line)
-            elif capturing:
-                is_other = False
-                for other in characters:
-                    if other != char and other in line:
-                        is_other = True
-                if is_other:
-                    capturing = False
-                else:
-                    char_lines.append(line)
+    char_accumulators = {
+        "林予安": {"story": [], "delta": [], "highlight": []},
+        "陳佳禾": {"story": [], "delta": [], "highlight": []},
+        "黃以真": {"story": [], "delta": [], "highlight": []}
+    }
+    
+    current_char = None
+    col0_keywords = ["林予安", "陳佳禾", "黃以真", "都市", "偏鄉", "文化", "充足", "學生", "普通", "經濟", "生", "人", "｜"]
+    
+    for line in lines:
+        l_strip = line.strip()
+        if not l_strip:
+            continue
+        # Strict check for table headers or choice metadata
+        if (("角色" in l_strip and "劇情結果" in l_strip) or 
+            ("差異重點" in l_strip and "結果" in l_strip) or 
+            (l_strip == "選項文字") or 
+            (l_strip.startswith("選項") and len(l_strip) <= 6)):
+            continue
+            
+        if not line.startswith(" "):
+            current_char = None
+            continue
+            
+        parts = split_by_2spaces(line)
+        if not parts:
+            continue
+            
+        # Post-process parts to split merged Delta and Highlight columns
+        refined_parts = []
+        for text, pos in parts:
+            for sub_text, sub_pos in split_stat_and_tail(text, pos):
+                refined_parts.append((sub_text, sub_pos))
+        parts = refined_parts
+            
+        detected_char = None
+        for char in ["林予安", "陳佳禾", "黃以真"]:
+            if char in parts[0][0]:
+                detected_char = char
+                break
+                
+        if detected_char:
+            current_char = detected_char
+            
+        stat_indices = [i for i, p in enumerate(parts) if is_stat_part(p[0], p[1])]
         
-        if char_lines:
-            cleaned_lines = []
-            for cl in char_lines:
-                cl_clean = cl.replace(char, "").strip()
-                cl_clean = re.sub(r'^[|\t\s\-\:\：\｜]+', '', cl_clean)
-                cl_clean = re.sub(r'[|\t\s\-\:\：\｜]+$', '', cl_clean)
-                if cl_clean:
-                    cleaned_lines.append(cl_clean)
+        col0_text = ""
+        col1_text = ""
+        col2_text = ""
+        col3_text = ""
+        
+        if stat_indices:
+            col2_start_idx = min(stat_indices)
+            col2_end_idx = max(stat_indices)
+            col2_text = " ".join([parts[i][0] for i in range(col2_start_idx, col2_end_idx + 1)])
+            col3_text = " ".join([parts[i][0] for i in range(col2_end_idx + 1, len(parts))])
             
-            full_char_text = " ".join(cleaned_lines)
-            parts = [p.strip() for p in re.split(r'\t|\|', full_char_text) if p.strip()]
+            left_parts = parts[:col2_start_idx]
+            if left_parts:
+                if left_parts[0][1] < 20:
+                    col0_text = left_parts[0][0]
+                    col1_text = " ".join([p[0] for p in left_parts[1:]])
+                else:
+                    col1_text = " ".join([p[0] for p in left_parts])
+        else:
+            left_parts = parts
+            col1_list = []
+            col3_list = []
+            for text, pos in left_parts:
+                if pos >= 50:
+                    col3_list.append(text)
+                else:
+                    if pos < 20 and any(kw in text for kw in col0_keywords):
+                        col0_text = text
+                    else:
+                        col1_list.append(text)
+            col1_text = " ".join(col1_list)
+            col3_text = " ".join(col3_list)
             
-            if len(parts) >= 3:
-                shadow_data[char] = {
-                    "story": parts[0],
-                    "delta": parts[1],
-                    "highlight": parts[2]
-                }
-            elif len(parts) == 2:
-                shadow_data[char] = {
-                    "story": parts[0],
-                    "delta": parts[1],
-                    "highlight": ""
-                }
-            else:
-                shadow_data[char] = {
-                    "story": full_char_text,
-                    "delta": "",
-                    "highlight": ""
-                }
+        if current_char:
+            if col1_text:
+                char_accumulators[current_char]["story"].append(col1_text)
+            if col2_text:
+                char_accumulators[current_char]["delta"].append(col2_text)
+            if col3_text:
+                char_accumulators[current_char]["highlight"].append(col3_text)
+                
+    for char, accum in char_accumulators.items():
+        story_text = "".join(accum["story"]).strip()
+        delta_text = "".join(accum["delta"]).strip()
+        highlight_text = "".join(accum["highlight"]).strip()
+        
+        story_text = story_text.replace("/", "").strip()
+        delta_text = delta_text.replace("/", "").strip()
+        highlight_text = highlight_text.replace("/", "").strip()
+        
+        if story_text or delta_text or highlight_text:
+            shadow_data[char] = {
+                "story": story_text,
+                "delta": delta_text,
+                "highlight": highlight_text
+            }
+            
     return shadow_data
 
 def extract_scene_name(stage_content):
@@ -195,7 +389,6 @@ def extract_scene_name(stage_content):
             bracket_match = re.search(r"「(.*?)」", line)
             if bracket_match:
                 return bracket_match.group(1).strip()
-            # Scan the next few lines
             for offset in range(1, 10):
                 if idx + offset < len(lines):
                     next_line_clean = lines[idx+offset].strip()
@@ -209,7 +402,6 @@ def build_data():
     
     content = normalize_text(content)
     
-    # Locate endings and reflections using regex
     m_end = re.search(r"最後[^\n]*結局[^\n]*畫[^\n]*", content)
     endings_pos = m_end.start() if m_end else -1
     
@@ -254,7 +446,7 @@ def build_data():
         scene_name = extract_scene_name(stage_content)
         
         scene_plot = ""
-        scene_plot_match = re.search(r"場景劇情\s*[\:\：]?(.*?)(?=玩家可選選項|主角可選選項|主角選|選項\s*[A-D]：|選項\s*[A-D]\s*[\:\：\s])", stage_content, re.DOTALL)
+        scene_plot_match = re.search(r"場景劇情\s*[\:\::]?(.*?)(?=玩家可選選項|主角可選選項|主角選|選項\s*[A-D]：|選項\s*[A-D]\s*[\:\::\s])", stage_content, re.DOTALL)
         if scene_plot_match:
             plot_raw = scene_plot_match.group(1).strip()
             scene_plot = clean_paragraphs(plot_raw.split("\n"))
@@ -269,7 +461,7 @@ def build_data():
                 label_match = re.search(r"^(.*?)\n", opt_text)
                 label = label_match.group(1).strip() if label_match else ""
                 if label.startswith("選項"):
-                    label = re.sub(r"^選項\s*[A-D]\s*[\:\：\s]*", "", label)
+                    label = re.sub(r"^選項\s*[A-D]\s*[\:\::\s]*", "", label)
                 
                 desc, _ = extract_section(opt_text, r"補充說明：", [r"主角.*選擇後劇情|選擇後劇情", r"主角內心(旁白|獨白)", r"同選項對照", r"想傳達的議題意義"])
                 story, _ = extract_section(opt_text, r"主角.*選擇後劇情|選擇後劇情", [r"主角內心(旁白|獨白)", r"同選項對照", r"想傳達的議題意義"])
@@ -286,21 +478,13 @@ def build_data():
                     "shadows": parse_shadows(shadows_raw)
                 }
                 
-        conclusion = ""
-        conclusion_match = re.search(rf"{st_title.split('：')[0]}結尾統一文字(.*?)(\Z)", stage_content, re.DOTALL)
-        if not conclusion_match:
-            conclusion_match = re.search(r"結尾統一文字(.*?)(\Z)", stage_content, re.DOTALL)
-        if conclusion_match:
-            conclusion_raw = conclusion_match.group(1)
-            conclusion = clean_conclusion(conclusion_raw)
-            
         game_data["stages"].append({
             "id": f"stage_{idx+1}",
             "title": st_title.split("：")[-1],
             "scene_name": scene_name,
             "scene_plot": scene_plot,
             "choices": choices,
-            "conclusion": conclusion
+            "conclusion": ""
         })
         
     # Parse Endings text
@@ -362,7 +546,8 @@ def build_data():
         
     game_data["reflections"] = reflections
     
-    os.makedirs("static", exist_ok=True)
+    # Apply deep cleaning to ALL text fields in the game data
+    game_data = deep_clean_all(game_data)
     
     with open("static/game_data.json", "w", encoding="utf-8") as f_out:
         json.dump(game_data, f_out, indent=2, ensure_ascii=False)

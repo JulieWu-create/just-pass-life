@@ -10,8 +10,8 @@ let selectedChoices = [];  // Array to store chosen options ['A', 'B', etc.]
 let dialogueParagraphs = [];
 let currentDialogueParaIndex = 0;
 
-let conclusionParagraphs = [];
-let currentConclusionParaIndex = 0;
+let introParagraphs = [];
+let currentIntroParaIndex = 0;
 
 let resultPhase = 1; // 1 = protagonist, 2 = shadows comparison
 
@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
 async function initGame() {
     try {
         // 1. Fetch game data JSON
-        const response = await fetch("/static/game_data.json");
+        const response = await fetch("static/game_data.json");
         gameData = await response.json();
         
         // 2. Bind event listeners
@@ -79,7 +79,7 @@ function bindEvents() {
 
     // Intro next button
     document.getElementById("btn-intro-next").addEventListener("click", () => {
-        startStage(1);
+        showNextIntroParagraph();
     });
 
     // Dialogue next button
@@ -96,19 +96,8 @@ function bindEvents() {
             document.getElementById("result-shadow-col").classList.remove("hidden");
             document.getElementById("btn-result-next").innerHTML = `繼續 <span class="cursor">▶</span>`;
         } else {
-            // Proceed to conclusion or next stage
-            const currentStageData = gameData.stages[currentStageIndex - 1];
-            if (currentStageData.conclusion) {
-                showConclusion();
-            } else {
-                advanceNextStage();
-            }
+            advanceNextStage();
         }
-    });
-
-    // Conclusion next button
-    document.getElementById("btn-conclusion-next").addEventListener("click", () => {
-        showNextConclusionParagraph();
     });
 
     // Ending screen next button
@@ -136,7 +125,7 @@ function showScreen(screenId) {
 
     // Toggle HUD header visibility
     const header = document.getElementById("game-header");
-    if (screenId === "screen-stage" || screenId === "screen-result" || screenId === "screen-conclusion") {
+    if (screenId === "screen-stage" || screenId === "screen-result") {
         header.classList.remove("hidden");
         updateHeaderStats();
     } else {
@@ -195,8 +184,55 @@ function setupShowcaseRotation() {
 // GAMEPLAY SEQUENCES
 function startIntro() {
     showScreen("screen-intro");
-    const introText = `${gameData.intro.bg}\n\n${gameData.intro.prompt}\n\n${gameData.intro.protagonist_intro}\n\n${gameData.intro.system_reflection}`;
-    typeText("intro-narrative-text", introText, 10);
+    // Build intro paragraphs from game data
+    const parts = [
+        gameData.intro.bg,
+        gameData.intro.prompt,  // "真的是這樣嗎？" - will be styled red
+        gameData.intro.protagonist_intro,
+        gameData.intro.system_reflection
+    ];
+    
+    // Split each part by \n\n and flatten, keeping the prompt separate
+    introParagraphs = [];
+    parts.forEach((part, partIndex) => {
+        const subParts = part.split("\n\n").map(p => p.trim()).filter(p => p.length > 0);
+        subParts.forEach(sp => {
+            introParagraphs.push({
+                text: sp,
+                isRedPrompt: (partIndex === 1) // The prompt part gets red styling
+            });
+        });
+    });
+    
+    currentIntroParaIndex = 0;
+    showNextIntroParagraph();
+}
+
+function showNextIntroParagraph() {
+    if (currentIntroParaIndex < introParagraphs.length) {
+        const para = introParagraphs[currentIntroParaIndex];
+        const el = document.getElementById("intro-narrative-text");
+        
+        if (para.isRedPrompt) {
+            el.innerHTML = `<span style="color: var(--text-red); font-size: 1.3em; font-weight: bold;">${para.text}</span>`;
+        } else {
+            el.textContent = "";
+            // Use typeText for non-red paragraphs
+            typeText("intro-narrative-text", para.text, 10);
+        }
+        
+        currentIntroParaIndex++;
+        
+        const nextBtn = document.getElementById("btn-intro-next");
+        if (currentIntroParaIndex === introParagraphs.length) {
+            nextBtn.innerHTML = `進入第一關 <span class="cursor">▶</span>`;
+        } else {
+            nextBtn.innerHTML = `繼續 <span class="cursor">▶</span>`;
+        }
+    } else {
+        // All intro paragraphs shown, proceed to stage 1
+        startStage(1);
+    }
 }
 
 function startStage(stageNum) {
@@ -209,8 +245,9 @@ function startStage(stageNum) {
     document.getElementById("stage-number-tag").textContent = `STAGE ${stageNum}`;
     document.getElementById("stage-scene-title").textContent = stageData.scene_name;
     
-    // Segment stage story/plot by paragraphs
-    dialogueParagraphs = stageData.scene_plot.split("\n\n").map(p => p.trim()).filter(p => p.length > 0);
+    // Segment stage story/plot by paragraphs - smart merging to avoid mid-sentence breaks
+    const rawParas = stageData.scene_plot.split("\n\n").map(p => p.trim()).filter(p => p.length > 0);
+    dialogueParagraphs = smartMergeParagraphs(rawParas);
     currentDialogueParaIndex = 0;
     
     // Hide choices menu initially
@@ -328,12 +365,27 @@ function makeChoice(optionId) {
     // Show results screen
     showScreen("screen-result");
     
-    // Render result body
-    document.getElementById("result-story-text").textContent = choiceData.story;
+    // Render result body - clean garbled text
+    let storyText = choiceData.story || "";
+    storyText = storyText.replace(/---\s*Table\s+\d+\s+on\s+Page\s+\d+\s*---/gi, '').trim();
+    storyText = storyText.replace(/Page\s*\d+/gi, '').trim();
+    storyText = storyText.replace(/狀態[\s]+變化[\s\S]*$/g, '').trim();
+    // Remove stat summary lines like "資源 -4" at the end
+    storyText = storyText.replace(/\n+(狀態|資源|學習力|壓力|資訊感)[\s\S]*$/g, '').trim();
+    document.getElementById("result-story-text").textContent = storyText;
     
     // Protagonist monologue
-    if (choiceData.monologue) {
-        document.getElementById("result-monologue-text").textContent = `「${choiceData.monologue}」`;
+    let monologueText = choiceData.monologue || "";
+    // Clean: remove trailing "影子角色" text
+    monologueText = monologueText.replace(/影子角色\s*$/g, '').trim();
+    // Clean: remove garbled table/page markers
+    monologueText = monologueText.replace(/---\s*Table\s+\d+\s+on\s+Page\s+\d+\s*---/gi, '').trim();
+    monologueText = monologueText.replace(/Page\s*\d+/gi, '').trim();
+    // Clean: remove tab-separated stat lines like "狀態\t變化..." patterns
+    monologueText = monologueText.replace(/狀態[\t\s]+變化[\s\S]*$/g, '').trim();
+    
+    if (monologueText) {
+        document.getElementById("result-monologue-text").textContent = `「${monologueText}」`;
         document.querySelector(".monologue-bubble").style.display = "block";
     } else {
         document.querySelector(".monologue-bubble").style.display = "none";
@@ -354,17 +406,26 @@ function makeChoice(optionId) {
         const shadow = choiceData.shadows[shadowRawName || conf.name];
         
         if (shadow) {
+            // Clean shadow story text - extract narrative from garbled column-merged PDF data
+            let shadowStory = cleanShadowText(shadow.story || "");
+            
+            // Clean delta text  
+            let shadowDelta = cleanShadowText(shadow.delta || "");
+            
+            // Clean highlight text
+            let shadowHighlight = cleanShadowText(shadow.highlight || "");
+            
             const card = document.createElement("div");
             card.className = `shadow-card ${conf.class}`;
             card.innerHTML = `
-                <div class="shadow-card-avatar" style="background-image: url('/static/assets/${conf.avatar}')"></div>
+                <div class="shadow-card-avatar" style="background-image: url('static/assets/${conf.avatar}')"></div>
                 <div class="shadow-card-content">
                     <div class="shadow-card-header">
                         <span class="shadow-card-name">${conf.name}</span>
-                        <span class="shadow-card-delta cyan-text">${shadow.delta || ""}</span>
+                        <span class="shadow-card-delta yellow-text">${shadowDelta}</span>
                     </div>
-                    <p class="shadow-card-story">${shadow.story}</p>
-                    ${shadow.highlight ? `<div class="shadow-card-highlight">✦ ${shadow.highlight}</div>` : ""}
+                    <p class="shadow-card-story">${shadowStory}</p>
+                    ${shadowHighlight ? `<div class="shadow-card-highlight">✦ ${shadowHighlight}</div>` : ""}
                 </div>
             `;
             shadowGrid.appendChild(card);
@@ -372,34 +433,6 @@ function makeChoice(optionId) {
     });
 }
 
-function showConclusion() {
-    const stageData = gameData.stages[currentStageIndex - 1];
-    showScreen("screen-conclusion");
-    
-    // Split conclusion by \n\n into paragraphs
-    conclusionParagraphs = stageData.conclusion.split("\n\n").map(p => p.trim()).filter(p => p.length > 0);
-    currentConclusionParaIndex = 0;
-    
-    // Render first conclusion paragraph
-    showNextConclusionParagraph();
-}
-
-function showNextConclusionParagraph() {
-    if (currentConclusionParaIndex < conclusionParagraphs.length) {
-        const text = conclusionParagraphs[currentConclusionParaIndex];
-        typeText("conclusion-text", text, 10);
-        currentConclusionParaIndex++;
-        
-        const nextBtn = document.getElementById("btn-conclusion-next");
-        if (currentConclusionParaIndex === conclusionParagraphs.length) {
-            nextBtn.innerHTML = `進入下一關 <span class="cursor">▶</span>`;
-        } else {
-            nextBtn.innerHTML = `繼續 <span class="cursor">▶</span>`;
-        }
-    } else {
-        advanceNextStage();
-    }
-}
 
 function advanceNextStage() {
     if (currentStageIndex < 5) {
@@ -427,9 +460,7 @@ async function submitChoicesToBackend() {
         const result = await response.json();
         renderEnding(result);
     } catch (err) {
-        console.error("Simulation error:", err);
-        // Fallback ending local resolution if API fails
-        alert("網路通訊發生問題，改採離線結局解析。");
+        console.warn("API simulation unavailable, using local fallback resolution:", err);
         const fallbackEnding = localResolveEnding(localStats);
         renderEnding({ ending: fallbackEnding, core_stats: localStats });
     }
@@ -604,3 +635,36 @@ function localResolveEnding(state) {
     }
     return { name: "普通前進型", priority: 6 };
 }
+
+function cleanShadowText(text) {
+    if (!text) return "";
+    return text.trim();
+}
+
+function smartMergeParagraphs(paras) {
+    const merged = [];
+    let temp = "";
+    
+    // Chinese punctuation marks that end a sentence
+    const endingPunc = /[。！？」』…”）\.\!\?]$/;
+    
+    paras.forEach(p => {
+        if (temp) {
+            temp += p;
+        } else {
+            temp = p;
+        }
+        
+        if (endingPunc.test(temp)) {
+            merged.push(temp);
+            temp = "";
+        }
+    });
+    
+    if (temp) {
+        merged.push(temp);
+    }
+    
+    return merged.length > 0 ? merged : paras;
+}
+
