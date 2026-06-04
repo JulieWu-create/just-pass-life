@@ -134,10 +134,15 @@
                     <div class="dialogue-text-container">
                         <p class="dialogue-text" id="stage-scene-text"></p>
                     </div>
+                    <div class="dialogue-btn-area" style="text-align: right; margin-top: 8px;">
+                        <button id="btn-dialogue-next" class="retro-btn hidden">
+                            繼續 <span class="cursor">▶</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="choices-container">
-                    <h4 class="menu-header">主主角抉擇 Menu</h4>
+                    <h4 class="menu-header">主角抉擇 Menu</h4>
                     <ul class="choices-list" id="stage-choices-list">
                         <!-- Choices will be injected dynamically -->
                     </ul>
@@ -149,7 +154,7 @@
         <section id="screen-result" class="screen">
             <div class="result-layout">
                 <!-- Left Column: Protagonist result -->
-                <div class="protagonist-result-column">
+                <div class="protagonist-result-column" id="result-proto-col">
                     <div class="retro-border-box selection-result-box">
                         <h3 class="column-title"><span class="yellow-text">張宇翔</span> 的選擇後果</h3>
                         <p id="result-story-text" class="result-body-text"></p>
@@ -161,7 +166,7 @@
                 </div>
 
                 <!-- Right Column: Shadow Character Comparisons -->
-                <div class="shadow-comparison-column">
+                <div class="shadow-comparison-column hidden" id="result-shadow-col">
                     <h3 class="column-title retro-header-style"><span class="cyan-text">影子角色對照</span> (同選項比較)</h3>
                     <div class="shadow-cards-grid" id="result-shadow-grid">
                         <!-- Shadow cards will be injected dynamically -->
@@ -170,16 +175,13 @@
             </div>
 
             <!-- Bottom: Reflections & Continue -->
-            <div class="result-footer-box retro-border-box">
-                <div class="reflection-msg">
-                    <div class="msg-title">【議題反思】</div>
-                    <p id="result-theme-text"></p>
-                </div>
+            <div class="result-footer-box" style="text-align: right; margin-top: 16px;">
                 <button id="btn-result-next" class="retro-btn">
-                    CONTINUE <span class="cursor">▶</span>
+                    繼續 <span class="cursor">▶</span>
                 </button>
             </div>
         </section>
+
 
         <!-- STAGE CONCLUSION SCREEN -->
         <section id="screen-conclusion" class="screen">

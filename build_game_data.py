@@ -82,6 +82,41 @@ def clean_paragraphs(lines):
         
     return "\n\n".join(result)
 
+def clean_conclusion(text):
+    # Remove "系統文字：" and "系統文字"
+    text = re.sub(r'系統文字\s*[\:\：]?', '', text)
+    # Remove table page headers like --- Table 1 on Page 25 ---
+    text = re.sub(r'--- Table \d+ on Page \d+ ---', '', text, flags=re.IGNORECASE)
+    
+    # Split text into lines to filter out table rows or option lists
+    lines = text.split('\n')
+    cleaned_lines = []
+    for line in lines:
+        l = line.strip()
+        if not l:
+            cleaned_lines.append("")
+            continue
+        # Skip table rows (contain tabs or pipes)
+        if '\t' in l or '|' in l:
+            continue
+        # Skip table headers, options or scores summary
+        if l.startswith(('選項', '角色', '張宇翔｜', '林予安｜', '陳佳禾｜', '黃以真｜')):
+            continue
+        if re.match(r'^[A-D]\s*[\.．\s]', l):
+            continue
+        # Skip transition prompts like "最後進入下一關：" or "最後進入結局畫面"
+        if l.startswith(('最後進入下一關', '最後進入下一關：', '最後進入結局畫面')):
+            continue
+        # Skip table page references
+        if 'Table' in l and 'Page' in l:
+            continue
+        cleaned_lines.append(l)
+        
+    cleaned_text = "\n".join(cleaned_lines)
+    # Remove multiple blank lines
+    cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text)
+    return cleaned_text.strip()
+
 def extract_section(text, start_pattern, end_patterns):
     start_match = re.search(start_pattern, text)
     if not start_match:
@@ -219,9 +254,9 @@ def build_data():
         scene_name = extract_scene_name(stage_content)
         
         scene_plot = ""
-        scene_plot_match = re.search(r"場景劇情：(.*?)主角可選選項|場景劇情(.*?)(?=主角可選選項|主角選)", stage_content, re.DOTALL)
+        scene_plot_match = re.search(r"場景劇情\s*[\:\：]?(.*?)(?=玩家可選選項|主角可選選項|主角選|選項\s*[A-D]：|選項\s*[A-D]\s*[\:\：\s])", stage_content, re.DOTALL)
         if scene_plot_match:
-            plot_raw = scene_plot_match.group(1) or scene_plot_match.group(2) or ""
+            plot_raw = scene_plot_match.group(1).strip()
             scene_plot = clean_paragraphs(plot_raw.split("\n"))
         
         choices = {}
@@ -256,10 +291,8 @@ def build_data():
         if not conclusion_match:
             conclusion_match = re.search(r"結尾統一文字(.*?)(\Z)", stage_content, re.DOTALL)
         if conclusion_match:
-            conclusion = clean_paragraphs(conclusion_match.group(1).split("\n"))
-            conclusion = re.sub(r"^不管玩家選哪個選項.*?\n", "", conclusion)
-            conclusion = re.sub(r"^這段文字.*?\n", "", conclusion)
-            conclusion = conclusion.strip()
+            conclusion_raw = conclusion_match.group(1)
+            conclusion = clean_conclusion(conclusion_raw)
             
         game_data["stages"].append({
             "id": f"stage_{idx+1}",

@@ -6,6 +6,15 @@ let gameData = null;
 let currentStageIndex = 1; // 1 to 5
 let selectedChoices = [];  // Array to store chosen options ['A', 'B', etc.]
 
+// State tracking for text progression and pagination
+let dialogueParagraphs = [];
+let currentDialogueParaIndex = 0;
+
+let conclusionParagraphs = [];
+let currentConclusionParaIndex = 0;
+
+let resultPhase = 1; // 1 = protagonist, 2 = shadows comparison
+
 // Local state tracking to render HUD progress bars
 let localStats = {
     resource: 10,
@@ -73,20 +82,33 @@ function bindEvents() {
         startStage(1);
     });
 
+    // Dialogue next button
+    document.getElementById("btn-dialogue-next").addEventListener("click", () => {
+        showNextDialogueParagraph();
+    });
+
     // Result next button
     document.getElementById("btn-result-next").addEventListener("click", () => {
-        const currentStageData = gameData.stages[currentStageIndex - 1];
-        if (currentStageData.conclusion) {
-            // Show year conclusion
-            showConclusion();
+        if (resultPhase === 1) {
+            // Transition to Phase 2: Show shadow character comparisons
+            resultPhase = 2;
+            document.getElementById("result-proto-col").classList.add("hidden");
+            document.getElementById("result-shadow-col").classList.remove("hidden");
+            document.getElementById("btn-result-next").innerHTML = `繼續 <span class="cursor">▶</span>`;
         } else {
-            advanceNextStage();
+            // Proceed to conclusion or next stage
+            const currentStageData = gameData.stages[currentStageIndex - 1];
+            if (currentStageData.conclusion) {
+                showConclusion();
+            } else {
+                advanceNextStage();
+            }
         }
     });
 
     // Conclusion next button
     document.getElementById("btn-conclusion-next").addEventListener("click", () => {
-        advanceNextStage();
+        showNextConclusionParagraph();
     });
 
     // Ending screen next button
@@ -187,10 +209,45 @@ function startStage(stageNum) {
     document.getElementById("stage-number-tag").textContent = `STAGE ${stageNum}`;
     document.getElementById("stage-scene-title").textContent = stageData.scene_name;
     
-    // Print Stage dialogue/narrative
-    typeText("stage-scene-text", stageData.scene_plot, 10);
+    // Segment stage story/plot by paragraphs
+    dialogueParagraphs = stageData.scene_plot.split("\n\n").map(p => p.trim()).filter(p => p.length > 0);
+    currentDialogueParaIndex = 0;
     
-    // Inject choices
+    // Hide choices menu initially
+    document.querySelector(".choices-container").classList.add("hidden");
+    
+    // Show dialogue next button
+    const nextBtn = document.getElementById("btn-dialogue-next");
+    nextBtn.classList.remove("hidden");
+    
+    // Render first paragraph
+    showNextDialogueParagraph();
+}
+
+function showNextDialogueParagraph() {
+    if (currentDialogueParaIndex < dialogueParagraphs.length) {
+        const text = dialogueParagraphs[currentDialogueParaIndex];
+        typeText("stage-scene-text", text, 8);
+        currentDialogueParaIndex++;
+        
+        const nextBtn = document.getElementById("btn-dialogue-next");
+        if (currentDialogueParaIndex === dialogueParagraphs.length) {
+            nextBtn.innerHTML = `進入抉擇 <span class="cursor">▶</span>`;
+        } else {
+            nextBtn.innerHTML = `繼續 <span class="cursor">▶</span>`;
+        }
+    } else {
+        // Hide next button and show choices menu
+        document.getElementById("btn-dialogue-next").classList.add("hidden");
+        document.querySelector(".choices-container").classList.remove("hidden");
+        
+        // Inject stage choices menu
+        injectStageChoices();
+    }
+}
+
+function injectStageChoices() {
+    const stageData = gameData.stages[currentStageIndex - 1];
     const choicesList = document.getElementById("stage-choices-list");
     choicesList.innerHTML = "";
     
@@ -221,9 +278,6 @@ function makeChoice(optionId) {
     selectedChoices.push(optionId);
     const stageData = gameData.stages[currentStageIndex - 1];
     const choiceData = stageData.choices[optionId];
-    
-    // Local calculation to update status indicators
-    const delta = choiceData.shadows["張宇翔"]?.delta || ""; // Or we can parse stageMain main main API values
     
     // Let's copy stats delta locally
     let localDelta = {};
@@ -264,6 +318,12 @@ function makeChoice(optionId) {
     for (const key in localDelta) {
         localStats[key] = (localStats[key] || 0) + localDelta[key];
     }
+    
+    // Reset two-phase result progression
+    resultPhase = 1;
+    document.getElementById("result-proto-col").classList.remove("hidden");
+    document.getElementById("result-shadow-col").classList.add("hidden");
+    document.getElementById("btn-result-next").innerHTML = `查看影子角色對照 <span class="cursor">▶</span>`;
     
     // Show results screen
     showScreen("screen-result");
@@ -310,15 +370,35 @@ function makeChoice(optionId) {
             shadowGrid.appendChild(card);
         }
     });
-    
-    // Reflection theme text
-    document.getElementById("result-theme-text").textContent = choiceData.theme;
 }
 
 function showConclusion() {
     const stageData = gameData.stages[currentStageIndex - 1];
     showScreen("screen-conclusion");
-    document.getElementById("conclusion-text").textContent = stageData.conclusion;
+    
+    // Split conclusion by \n\n into paragraphs
+    conclusionParagraphs = stageData.conclusion.split("\n\n").map(p => p.trim()).filter(p => p.length > 0);
+    currentConclusionParaIndex = 0;
+    
+    // Render first conclusion paragraph
+    showNextConclusionParagraph();
+}
+
+function showNextConclusionParagraph() {
+    if (currentConclusionParaIndex < conclusionParagraphs.length) {
+        const text = conclusionParagraphs[currentConclusionParaIndex];
+        typeText("conclusion-text", text, 10);
+        currentConclusionParaIndex++;
+        
+        const nextBtn = document.getElementById("btn-conclusion-next");
+        if (currentConclusionParaIndex === conclusionParagraphs.length) {
+            nextBtn.innerHTML = `進入下一關 <span class="cursor">▶</span>`;
+        } else {
+            nextBtn.innerHTML = `繼續 <span class="cursor">▶</span>`;
+        }
+    } else {
+        advanceNextStage();
+    }
 }
 
 function advanceNextStage() {
