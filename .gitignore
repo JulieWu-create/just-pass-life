@@ -1,0 +1,35 @@
+# Python Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Python Cache & compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Testing & Linting Caches
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Local Environment configuration
+.env
+.env.local
+.env.*.local
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>剛好及格的人生 - 互動網頁體驗</title>
+    <meta name="description" content="《剛好及格的人生》是一個探討台灣教育與階級再製不平等的像素風互動式選擇遊戲。">
+    <!-- Google Fonts Pixelify Sans and Press Start 2P -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/index.css">
+</head>
+<body>
+    <!-- Scanline overlays to enhance the retro CRT monitor aesthetic -->
+    <div class="crt-overlay"></div>
+    <div class="screen-scanlines"></div>
+
+    <div class="game-container">
+        <!-- HEADER STATS BAR (Visible during gameplay) -->
+        <header id="game-header" class="retro-header hidden">
+            <div class="character-identity">
+                <span class="pixel-avatar-mini" style="background-image: url('/static/assets/avatar_yu_xiang.png')"></span>
+                <div class="name-badge">
+                    <div class="char-name">張宇翔</div>
+                    <div class="char-class">LV.1 弱勢學生</div>
+                </div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-bar-container" id="stat-resource" title="資源：家庭支持、金錢、時間">
+                    <span class="stat-label">RES</span>
+                    <div class="stat-progress-bg">
+                        <div class="stat-progress-fill" style="width: 100%"></div>
+                    </div>
+                    <span class="stat-val">10/10</span>
+                </div>
+                <div class="stat-bar-container" id="stat-learning" title="學習力：成績、準備程度、吸收能力">
+                    <span class="stat-label">LRN</span>
+                    <div class="stat-progress-bg">
+                        <div class="stat-progress-fill" style="width: 50%"></div>
+                    </div>
+                    <span class="stat-val">5/10</span>
+                </div>
+                <div class="stat-bar-container" id="stat-stress" title="壓力：焦慮度、打工疲累、家庭責任">
+                    <span class="stat-label">STR</span>
+                    <div class="stat-progress-bg">
+                        <div class="stat-progress-fill" style="width: 50%"></div>
+                    </div>
+                    <span class="stat-val">5/10</span>
+                </div>
+                <div class="stat-bar-container" id="stat-info" title="資訊感：機會認知、升學管道了解度">
+                    <span class="stat-label">INF</span>
+                    <div class="stat-progress-bg">
+                        <div class="stat-progress-fill" style="width: 30%"></div>
+                    </div>
+                    <span class="stat-val">3/10</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- START SCREEN -->
+        <section id="screen-start" class="screen active">
+            <div class="logo-area">
+                <h1 class="game-title pixel-text glow">剛好及格的人生</h1>
+                <p class="game-subtitle">─ 我們以為努力就夠了嗎？ ─</p>
+            </div>
+            <div class="character-showcase">
+                <div class="showcase-card yu-xiang active">
+                    <img src="/static/assets/avatar_yu_xiang.png" alt="張宇翔" class="pixel-avatar-large">
+                    <div class="showcase-info">
+                        <div class="badge red">主角</div>
+                        <h3>張宇翔</h3>
+                        <p>打工負擔、資源缺乏，掙扎於生存與課業間。</p>
+                    </div>
+                </div>
+                <div class="showcase-card yu-an">
+                    <img src="/static/assets/avatar_yu_an.png" alt="林予安" class="pixel-avatar-large">
+                    <div class="showcase-info">
+                        <div class="badge green">都市資源充足</div>
+                        <h3>林予安</h3>
+                        <p>都市高社經家庭，有最好的補習、設備與支持。</p>
+                    </div>
+                </div>
+                <div class="showcase-card jia_he">
+                    <img src="/static/assets/avatar_jia_he.png" alt="陳佳禾" class="pixel-avatar-large">
+                    <div class="showcase-info">
+                        <div class="badge blue">偏鄉環境限制</div>
+                        <h3>陳佳禾</h3>
+                        <p>遠離市區，面臨長途通勤與資訊落差。</p>
+                    </div>
+                </div>
+                <div class="showcase-card yi_zhen">
+                    <img src="/static/assets/avatar_yi_zhen.png" alt="黃以真" class="pixel-avatar-large">
+                    <div class="showcase-info">
+                        <div class="badge purple">文化資本高</div>
+                        <h3>黃以真</h3>
+                        <p>家庭經濟普通，但父母注重教育，懂讀書方法。</p>
+                    </div>
+                </div>
+            </div>
+            <button id="btn-start-game" class="retro-btn pulse">
+                <span class="cursor">▶</span> START GAME
+            </button>
+        </section>
+
+        <!-- INTRO SCREEN -->
+        <section id="screen-intro" class="screen">
+            <div class="retro-border-box scene-box" style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('/static/assets/classroom_bg.png')">
+                <div class="intro-dialog-bubble">
+                    <h2 class="bubble-title">高中生活開始</h2>
+                    <p id="intro-narrative-text"></p>
+                </div>
+            </div>
+            <div class="action-area">
+                <button id="btn-intro-next" class="retro-btn">
+                    NEXT <span class="cursor">▶</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- STAGE PLAY SCREEN -->
+        <section id="screen-stage" class="screen">
+            <div class="game-play-area">
+                <div class="scene-visual-container" style="background-image: url('/static/assets/classroom_bg.png')">
+                    <div class="sprite-container">
+                        <img src="/static/assets/avatar_yu_xiang.png" alt="張宇翔" class="sprite-stand">
+                    </div>
+                    <div class="stage-tag pixel-text" id="stage-number-tag">STAGE 1</div>
+                </div>
+
+                <div class="retro-border-box dialogue-box">
+                    <h3 class="scene-title" id="stage-scene-title">我是不是不夠努力？</h3>
+                    <div class="dialogue-text-container">
+                        <p class="dialogue-text" id="stage-scene-text"></p>
+                    </div>
+                </div>
+
+                <div class="choices-container">
+                    <h4 class="menu-header">主主角抉擇 Menu</h4>
+                    <ul class="choices-list" id="stage-choices-list">
+                        <!-- Choices will be injected dynamically -->
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- RESOLVED PLOT & SHADOW COMPARISON SCREEN -->
+        <section id="screen-result" class="screen">
+            <div class="result-layout">
+                <!-- Left Column: Protagonist result -->
+                <div class="protagonist-result-column">
+                    <div class="retro-border-box selection-result-box">
+                        <h3 class="column-title"><span class="yellow-text">張宇翔</span> 的選擇後果</h3>
+                        <p id="result-story-text" class="result-body-text"></p>
+                        <div class="monologue-bubble">
+                            <span class="bubble-tail"></span>
+                            <p id="result-monologue-text" class="italic-text"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Shadow Character Comparisons -->
+                <div class="shadow-comparison-column">
+                    <h3 class="column-title retro-header-style"><span class="cyan-text">影子角色對照</span> (同選項比較)</h3>
+                    <div class="shadow-cards-grid" id="result-shadow-grid">
+                        <!-- Shadow cards will be injected dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom: Reflections & Continue -->
+            <div class="result-footer-box retro-border-box">
+                <div class="reflection-msg">
+                    <div class="msg-title">【議題反思】</div>
+                    <p id="result-theme-text"></p>
+                </div>
+                <button id="btn-result-next" class="retro-btn">
+                    CONTINUE <span class="cursor">▶</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- STAGE CONCLUSION SCREEN -->
+        <section id="screen-conclusion" class="screen">
+            <div class="retro-border-box conclusion-box" style="background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('/static/assets/classroom_bg.png')">
+                <h2 class="conclusion-header glow">學年結算</h2>
+                <div class="conclusion-content">
+                    <p id="conclusion-text" class="conclusion-body"></p>
+                </div>
+            </div>
+            <div class="action-area">
+                <button id="btn-conclusion-next" class="retro-btn">
+                    繼續下一步 <span class="cursor">▶</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ENDING SCREEN -->
+        <section id="screen-ending" class="screen">
+            <div class="ending-panel">
+                <div class="ending-header-box retro-border-box">
+                    <div class="badge-row">
+                        <span class="ending-tag red">FINAL ENDING</span>
+                    </div>
+                    <h2 class="ending-title pixel-text glow" id="ending-name">剛好及格型</h2>
+                </div>
+
+                <div class="ending-main-grid">
+                    <div class="ending-narrative retro-border-box">
+                        <h3>結局劇情</h3>
+                        <p id="ending-screen-text"></p>
+                        <div class="ending-message-box">
+                            <div class="ending-reflection-header">結語</div>
+                            <p id="ending-reflection-text" class="ending-reflection"></p>
+                        </div>
+                    </div>
+
+                    <div class="ending-stats-compare retro-border-box">
+                        <h3>終局數值總結</h3>
+                        <table class="retro-table">
+                            <thead>
+                                <tr>
+                                    <th>數值</th>
+                                    <th>宇翔 (你)</th>
+                                    <th>予安 (都市)</th>
+                                    <th>佳禾 (偏鄉)</th>
+                                    <th>以真 (文化)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ending-stats-table-body">
+                                <!-- Stats comparison injected dynamically -->
+                            </tbody>
+                        </table>
+                        <div class="analysis-box">
+                            <div class="ending-analysis-header">結構分析</div>
+                            <p id="ending-analysis-text"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ending-action-area">
+                    <button id="btn-go-reflections" class="retro-btn pulse">
+                        進入結構反思 <span class="cursor">▶</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- REFLECTION SCREEN -->
+        <section id="screen-reflection" class="screen">
+            <div class="reflection-layout">
+                <div class="reflection-header-area">
+                    <h2 class="reflection-title pixel-text glow">課後問題與討論</h2>
+                    <div class="progress-step-indicator" id="reflection-progress">問題 1 / 3</div>
+                </div>
+
+                <div class="retro-border-box reflection-question-box">
+                    <p id="reflection-q-text" class="question-text"></p>
+                    <ul class="reflection-choices" id="reflection-choices-list">
+                        <!-- Reflection choices injected dynamically -->
+                    </ul>
+                </div>
+
+                <div class="retro-border-box reflection-feedback-box hidden" id="reflection-feedback-container">
+                    <h3>【結構解析】</h3>
+                    <p id="reflection-feedback-text"></p>
+                    <button id="btn-next-reflection" class="retro-btn">
+                        下一個問題 <span class="cursor">▶</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- FINAL METAPHOR & CREDITS SCREEN -->
+        <section id="screen-final" class="screen">
+            <div class="final-metaphor-box retro-border-box" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('/static/assets/classroom_bg.png')">
+                <div class="final-visual-scene">
+                    <div class="runners-container">
+                        <div class="runner-track track-1">
+                            <div class="runner-label">林予安 (都市)</div>
+                            <div class="runner-bar progress-full"></div>
+                        </div>
+                        <div class="runner-track track-2">
+                            <div class="runner-label">陳佳禾 (偏鄉)</div>
+                            <div class="runner-bar progress-medium-low"></div>
+                        </div>
+                        <div class="runner-track track-3">
+                            <div class="runner-label">黃以真 (文化)</div>
+                            <div class="runner-bar progress-medium-high"></div>
+                        </div>
+                        <div class="runner-track track-4 protagonist-track">
+                            <div class="runner-label">張宇翔 (你 - 弱勢)</div>
+                            <div class="runner-bar progress-low"></div>
+                            <div class="runner-pack">背包 (重量: 99kg)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <blockquote class="final-philosophical-quote">
+                    「所以問題不是努力有沒有用。問題是：當每個人都被要求努力時，我們有沒有看見，有些人的努力，從一開始就比較貴？」
+                </blockquote>
+
+                <div class="final-credits">
+                    <h1 class="credits-logo">剛好及格的人生</h1>
+                    <p class="credits-text">教育再製與資源落差互動體驗 ‧ 期末專案</p>
+                    <p class="credits-sub">本專案旨在以具體數值模型與互動故事呈現結構性教育資源不平等，感謝您的參與。</p>
+                </div>
+            </div>
+            
+            <div class="action-area">
+                <button id="btn-restart-game" class="retro-btn pulse">
+                    <span class="cursor">▶</span> REPLAY GAME
+                </button>
+            </div>
+        </section>
+    </div>
+    
+    <script src="/static/index.js"></script>
+</body>
+</html>
