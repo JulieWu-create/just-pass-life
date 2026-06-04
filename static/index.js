@@ -2,6 +2,221 @@
    《剛好及格的人生》- RPG Game Client Logic (JavaScript)
    ========================================================================== */
 
+class BgmSequencer {
+    constructor() {
+        this.ctx = null;
+        this.isPlaying = false;
+        this.nextNoteTime = 0.0;
+        this.step = 0;
+        
+        // Melody notes and bass notes
+        this.melody = [
+            261.63, null,   329.63, null,   392.00, 523.25, 392.00, null,
+            349.23, null,   440.00, null,   523.25, 698.46, 523.25, null,
+            293.66, null,   349.23, null,   392.00, 587.33, 392.00, null,
+            392.00, null,   493.88, null,   587.33, 783.99, 587.33, null
+        ];
+        
+        this.bass = [
+            130.81, 130.81, 130.81, 130.81, 130.81, 130.81, 130.81, 130.81,
+            174.61, 174.61, 174.61, 174.61, 174.61, 174.61, 174.61, 174.61,
+            146.83, 146.83, 146.83, 146.83, 146.83, 146.83, 146.83, 146.83,
+            196.00, 196.00, 196.00, 196.00, 196.00, 196.00, 196.00, 196.00
+        ];
+        
+        this.tempo = 110;
+        this.stepDuration = 60 / this.tempo / 2;
+    }
+    
+    start(ctx) {
+        if (this.isPlaying) return;
+        this.ctx = ctx;
+        this.isPlaying = true;
+        this.step = 0;
+        this.nextNoteTime = this.ctx.currentTime;
+        this.schedulerInterval = setInterval(() => this.scheduler(), 50);
+    }
+    
+    stop() {
+        if (!this.isPlaying) return;
+        this.isPlaying = false;
+        clearInterval(this.schedulerInterval);
+    }
+    
+    scheduler() {
+        while (this.nextNoteTime < this.ctx.currentTime + 0.1) {
+            this.scheduleNote(this.step, this.nextNoteTime);
+            this.nextNoteTime += this.stepDuration;
+            this.step = (this.step + 1) % this.melody.length;
+        }
+    }
+    
+    scheduleNote(step, time) {
+        const mFreq = this.melody[step];
+        const bFreq = this.bass[step];
+        
+        if (mFreq) {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(mFreq, time);
+            
+            gain.gain.setValueAtTime(0.0, time);
+            gain.gain.linearRampToValueAtTime(0.015, time + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + this.stepDuration * 1.5);
+            
+            osc.start(time);
+            osc.stop(time + this.stepDuration * 1.5);
+        }
+        
+        if (bFreq && step % 2 === 0) {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.type = "square";
+            osc.frequency.setValueAtTime(bFreq / 2, time);
+            
+            gain.gain.setValueAtTime(0.0, time);
+            gain.gain.linearRampToValueAtTime(0.008, time + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + this.stepDuration * 1.8);
+            
+            osc.start(time);
+            osc.stop(time + this.stepDuration * 2);
+        }
+    }
+}
+
+class AudioSystem {
+    constructor() {
+        this.ctx = null;
+        this.isMuted = true;
+        this.bgm = new BgmSequencer();
+    }
+    
+    init() {
+        if (this.ctx) return;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+            this.ctx = new AudioContextClass();
+        }
+    }
+    
+    playSelect() {
+        this.init();
+        if (!this.ctx || this.isMuted) return;
+        if (this.ctx.state === "suspended") this.ctx.resume();
+        
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        
+        osc.type = "square";
+        const t = this.ctx.currentTime;
+        osc.frequency.setValueAtTime(150, t);
+        osc.frequency.exponentialRampToValueAtTime(600, t + 0.08);
+        
+        gain.gain.setValueAtTime(0.03, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+        
+        osc.start(t);
+        osc.stop(t + 0.08);
+    }
+    
+    playChime() {
+        this.init();
+        if (!this.ctx || this.isMuted) return;
+        if (this.ctx.state === "suspended") this.ctx.resume();
+        
+        const t = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+        notes.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.type = "square";
+            osc.frequency.setValueAtTime(freq, t + idx * 0.08);
+            gain.gain.setValueAtTime(0.03, t + idx * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.08 + 0.15);
+            osc.start(t + idx * 0.08);
+            osc.stop(t + idx * 0.08 + 0.2);
+        });
+    }
+    
+    playStageChime() {
+        this.init();
+        if (!this.ctx || this.isMuted) return;
+        if (this.ctx.state === "suspended") this.ctx.resume();
+        
+        const t = this.ctx.currentTime;
+        const notes = [392.00, 523.25, 659.25, 783.99]; // G4, C5, E5, G5
+        notes.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(freq, t + idx * 0.06);
+            gain.gain.setValueAtTime(0.04, t + idx * 0.06);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.06 + 0.25);
+            osc.start(t + idx * 0.06);
+            osc.stop(t + idx * 0.06 + 0.3);
+        });
+    }
+    
+    playEndingChime() {
+        this.init();
+        if (!this.ctx || this.isMuted) return;
+        if (this.ctx.state === "suspended") this.ctx.resume();
+        
+        const t = this.ctx.currentTime;
+        const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.type = idx === notes.length - 1 ? "square" : "triangle";
+            osc.frequency.setValueAtTime(freq, t + idx * 0.1);
+            gain.gain.setValueAtTime(0.03, t + idx * 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.1 + 0.4);
+            osc.start(t + idx * 0.1);
+            osc.stop(t + idx * 0.1 + 0.5);
+        });
+    }
+    
+    toggleBgm() {
+        this.init();
+        if (!this.ctx) return;
+        if (this.ctx.state === "suspended") this.ctx.resume();
+        
+        this.isMuted = !this.isMuted;
+        const btn = document.getElementById("btn-audio-toggle");
+        
+        if (this.isMuted) {
+            btn.innerHTML = `<span class="audio-icon">🔇</span>`;
+            this.bgm.stop();
+        } else {
+            btn.innerHTML = `<span class="audio-icon">🔊</span>`;
+            this.bgm.start(this.ctx);
+            this.playSelect();
+        }
+    }
+    
+    startBgm() {
+        this.init();
+        if (!this.ctx || this.isMuted) return;
+        if (this.ctx.state === "suspended") this.ctx.resume();
+        this.bgm.start(this.ctx);
+    }
+}
+
+const audioSystem = new AudioSystem();
+
 let gameData = null;
 let currentStageIndex = 1; // 1 to 5
 let selectedChoices = [];  // Array to store chosen options ['A', 'B', etc.]
@@ -59,6 +274,15 @@ async function initGame() {
         
         // 2. Bind event listeners
         bindEvents();
+        setupAudioToggle();
+        
+        // Setup select sound on button clicks
+        document.addEventListener("click", (e) => {
+            const btn = e.target.closest("button") || e.target.closest(".choice-item-btn") || e.target.closest(".retro-btn");
+            if (btn && btn.id !== "btn-audio-toggle") {
+                audioSystem.playSelect();
+            }
+        });
         
         // 3. Setup Showcase rotation
         setupShowcaseRotation();
@@ -70,9 +294,23 @@ async function initGame() {
     }
 }
 
+function setupAudioToggle() {
+    const btn = document.getElementById("btn-audio-toggle");
+    if (btn) {
+        btn.addEventListener("click", () => {
+            audioSystem.toggleBgm();
+        });
+    }
+}
+
 function bindEvents() {
     // Start Game button
     document.getElementById("btn-start-game").addEventListener("click", () => {
+        audioSystem.init();
+        audioSystem.playChime();
+        if (!audioSystem.isMuted) {
+            audioSystem.startBgm();
+        }
         clearInterval(showcaseInterval);
         startIntro();
     });
@@ -236,6 +474,8 @@ function showNextIntroParagraph() {
 }
 
 function startStage(stageNum) {
+    audioSystem.init();
+    audioSystem.playStageChime();
     currentStageIndex = stageNum;
     const stageData = gameData.stages[stageNum - 1];
     
@@ -467,6 +707,8 @@ async function submitChoicesToBackend() {
 }
 
 function renderEnding(apiResult) {
+    audioSystem.init();
+    audioSystem.playEndingChime();
     showScreen("screen-ending");
     
     const endingName = apiResult.ending.name;
